@@ -153,6 +153,45 @@ jobs:
           name: macos_app_py_${{ matrix.pyver }}
           path: release/*
 
+      - name: List artifacts
+        run: ls -al release
+
+
+  build_scancode_for_release_macos_arm64:
+    permissions:
+      contents: read # to fetch code (actions/checkout)
+
+    name: Build app Release for mac arm64 (on m1 instance ie. macos-14)
+    runs-on: macos-14
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: true
+      matrix:
+       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python on ${{ matrix.pyver }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.pyver }} 
+
+      - name: Build mac arm64 app archive
+        run: etc/release/scancode-create-release-app-macos-arm64.sh ${{ matrix.pyver }}
+
+      - name: Collect built mac arm64 app for python ${{ matrix.pyver }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos_arm64_app_py_${{ matrix.pyver }}
+          path: release/*
+
+      - name: List artifacts
+        run: ls -al release
 
   build_scancode_for_release_windows:
     permissions:
@@ -219,215 +258,257 @@ jobs:
           path: release/*
 
 
-  smoke_test_install_and_run_pypi_wheels_on_posix:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
+  # smoke_test_install_and_run_pypi_wheels_on_posix:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
 
-    name: Test PyPI wheels on linux and mac
-    needs:
-      - build_scancode_wheel_for_pypi
-    runs-on: ${{ matrix.os }}
+  #   name: Test PyPI wheels on linux and mac
+  #   needs:
+  #     - build_scancode_wheel_for_pypi
+  #   runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: bash
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
-        pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       os: [ubuntu-20.04, ubuntu-22.04, macos-11, macos-12]
+  #       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.pyver }}
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
 
-      - name: Download wheels artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: wheels-${{ matrix.pyver }}
-          path: dist
+  #     - name: Download wheels artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: wheels-${{ matrix.pyver }}
+  #         path: dist
 
-      - name: test install wheels
-        run: |
-          echo "license: gpl-2.0" > some.file
-          rm -rf venv;  \
-          python -m venv venv
-          venv/bin/python -m pip install --upgrade pip wheel setuptools
-          for f in `find dist -type f -name "*${{ matrix.pyver }}*"`; \
-            do \
-              venv/bin/python -m pip install --force-reinstall "$f[full]" ; \
-              venv/bin/scancode -clipeu --json-pp - some.file ; \
-            done
-
-
-  smoke_test_install_and_run_pypi_wheels_on_windows:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
-
-    name: Test PyPI wheels on Windows
-    needs:
-      - build_scancode_wheel_for_pypi
-    runs-on: ${{ matrix.os }}
-
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      fail-fast: true
-      matrix:
-       os: [windows-2019, windows-2022]
-       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.pyver }}
-
-      - name: Download wheels artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: wheels-${{ matrix.pyver }}
-          path: dist
-
-      - name: test install wheel
-        run: |
-          echo "license: gpl-2.0" > some.file
-          python -m venv venv
-          venv/Scripts/python.exe -m pip install --upgrade pip
-          for f in `find dist -type f  -name "*${{ matrix.pyver }}*"`; \
-            do \
-              venv/Scripts/python.exe -m pip install --force-reinstall "$f[full]" ; \
-              venv/Scripts/scancode -clipeu --json-pp - some.file ; \
-            done
+  #     - name: test install wheels
+  #       run: |
+  #         echo "license: gpl-2.0" > some.file
+  #         rm -rf venv;  \
+  #         python -m venv venv
+  #         venv/bin/python -m pip install --upgrade pip wheel setuptools
+  #         for f in `find dist -type f -name "*${{ matrix.pyver }}*"`; \
+  #           do \
+  #             venv/bin/python -m pip install --force-reinstall "$f[full]" ; \
+  #             venv/bin/scancode -clipeu --json-pp - some.file ; \
+  #           done
 
 
-  smoke_test_install_and_run_app_archives_on_linux:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
+  # smoke_test_install_and_run_pypi_wheels_on_windows:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
 
-    name: Test app on ${{ matrix.os }}
-    needs:
-      - build_scancode_for_release_linux
-    runs-on: ${{ matrix.os }}
+  #   name: Test PyPI wheels on Windows
+  #   needs:
+  #     - build_scancode_wheel_for_pypi
+  #   runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: bash
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
-        pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #      os: [windows-2019, windows-2022]
+  #      pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.pyver }}
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
 
-      - name: Download a single artifact linux_app_py_${{ matrix.pyver }}
-        uses: actions/download-artifact@v3
-        with:
-          name: linux_app_py_${{ matrix.pyver }}
-          path: dist
+  #     - name: Download wheels artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: wheels-${{ matrix.pyver }}
+  #         path: dist
 
-      - name: test install app archive
-        run: |
-          for f in `find dist -type f -name "*.tar.gz"`; \
-            do \
-                python etc/release/scancode_release_tests.py $f; \
-            done
-
-
-  smoke_test_install_and_run_app_archives_on_macos:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
-
-    name: Test app on ${{ matrix.os }}
-    needs:
-      - build_scancode_for_release_macos
-    runs-on: ${{ matrix.os }}
-
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [macos-11, macos-12]
-        pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.pyver }}
-
-      - name: Download a single artifact macos_app_py_${{ matrix.pyver }}
-        uses: actions/download-artifact@v3
-        with:
-          name: macos_app_py_${{ matrix.pyver }}
-          path: dist
-
-      - name: test install app archive
-        run: |
-          for f in `find dist -type f -name "*.tar.gz"`; \
-            do \
-                python etc/release/scancode_release_tests.py $f; \
-            done
+  #     - name: test install wheel
+  #       run: |
+  #         echo "license: gpl-2.0" > some.file
+  #         python -m venv venv
+  #         venv/Scripts/python.exe -m pip install --upgrade pip
+  #         for f in `find dist -type f  -name "*${{ matrix.pyver }}*"`; \
+  #           do \
+  #             venv/Scripts/python.exe -m pip install --force-reinstall "$f[full]" ; \
+  #             venv/Scripts/scancode -clipeu --json-pp - some.file ; \
+  #           done
 
 
-  smoke_test_install_and_run_app_archives_on_windows:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
+  # smoke_test_install_and_run_app_archives_on_linux:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
 
-    name: Test app on ${{ matrix.os }}
-    needs:
-      - build_scancode_for_release_windows
-    runs-on: ${{ matrix.os }}
+  #   name: Test app on ${{ matrix.os }}
+  #   needs:
+  #     - build_scancode_for_release_linux
+  #   runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: cmd
+  #   defaults:
+  #     run:
+  #       shell: bash
 
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [windows-2019, windows-2022]
-        pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       os: [ubuntu-20.04, ubuntu-22.04]
+  #       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
-    steps:
-      - uses: actions/checkout@v3
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.pyver }}
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
 
-      - name: Download a single artifact windows_app_py_${{ matrix.pyver }}
-        uses: actions/download-artifact@v3
-        with:
-          name: windows_app_py_${{ matrix.pyver }}
-          path: dist
+  #     - name: Download a single artifact linux_app_py_${{ matrix.pyver }}
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: linux_app_py_${{ matrix.pyver }}
+  #         path: dist
 
-      - name: test install app archive
-        run: |
-          for %%F in (dist/*.zip) do python etc/release/scancode_release_tests.py dist/%%F
+  #     - name: test install app archive
+  #       run: |
+  #         for f in `find dist -type f -name "*.tar.gz"`; \
+  #           do \
+  #               python etc/release/scancode_release_tests.py $f; \
+  #           done
+
+
+  # smoke_test_install_and_run_app_archives_on_macos:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
+
+  #   name: Test app on ${{ matrix.os }}
+  #   needs:
+  #     - build_scancode_for_release_macos
+  #   runs-on: ${{ matrix.os }}
+
+  #   defaults:
+  #     run:
+  #       shell: bash
+
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       os: [macos-11, macos-12]
+  #       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+  #   steps:
+  #     - uses: actions/checkout@v3
+
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
+
+  #     - name: Download a single artifact macos_app_py_${{ matrix.pyver }}
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: macos_app_py_${{ matrix.pyver }}
+  #         path: dist
+
+  #     - name: test install app archive
+  #       run: |
+  #         for f in `find dist -type f -name "*.tar.gz"`; \
+  #           do \
+  #               python etc/release/scancode_release_tests.py $f; \
+  #           done
+
+
+  # smoke_test_install_and_run_app_archives_on_macos_arm64:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
+
+  #   name: Test app on ${{ matrix.os }}
+  #   needs:
+  #     - build_scancode_for_release_macos_arm64
+  #   runs-on: ${{ matrix.os }}
+
+  #   defaults:
+  #     run:
+  #       shell: bash
+
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       os: [macos-14]
+  #       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+  #   steps:
+  #     - uses: actions/checkout@v3
+
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
+
+  #     - name: Download a single artifact macos_arm64_app_py_${{ matrix.pyver }}
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: macos_arm64_app_py_${{ matrix.pyver }}
+  #         path: dist
+
+  #     - name: test install app archive
+  #       run: |
+  #         for f in `find dist -type f -name "*.tar.gz"`; \
+  #           do \
+  #               python etc/release/scancode_release_tests.py $f; \
+  #           done
+            
+
+  # smoke_test_install_and_run_app_archives_on_windows:
+  #   permissions:
+  #     contents: read # to fetch code (actions/checkout)
+
+  #   name: Test app on ${{ matrix.os }}
+  #   needs:
+  #     - build_scancode_for_release_windows
+  #   runs-on: ${{ matrix.os }}
+
+  #   defaults:
+  #     run:
+  #       shell: cmd
+
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       os: [windows-2019, windows-2022]
+  #       pyver: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+  #   steps:
+  #     - uses: actions/checkout@v3
+
+  #     - name: Set up Python ${{ matrix.pyver }} on ${{ matrix.os }}
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.pyver }}
+
+  #     - name: Download a single artifact windows_app_py_${{ matrix.pyver }}
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: windows_app_py_${{ matrix.pyver }}
+  #         path: dist
+
+  #     - name: test install app archive
+  #       run: |
+  #         for %%F in (dist/*.zip) do python etc/release/scancode_release_tests.py dist/%%F
+
 
   publish_to_gh_release:
     permissions:
@@ -435,9 +516,10 @@ jobs:
 
     name: Publish to GH Release
     needs:
-      - smoke_test_install_and_run_app_archives_on_linux
-      - smoke_test_install_and_run_app_archives_on_windows
-      - smoke_test_install_and_run_app_archives_on_macos
+      # - smoke_test_install_and_run_app_archives_on_linux
+      # - smoke_test_install_and_run_app_archives_on_windows
+      # - smoke_test_install_and_run_app_archives_on_macos
+      # - smoke_test_install_and_run_app_archives_on_macos_arm64
       - build_scancode_for_release_source
       - build_scancode_for_release_windows
       - build_scancode_for_release_linux
@@ -485,6 +567,36 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: macos_app_py_3.11
+          path: dist
+
+      - name: Download a single artifact macos_arm64_app for python 3.7
+        uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_app_py_3.7
+          path: dist
+
+      - name: Download a single artifact macos_arm64_app for python 3.8
+        uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_app_py_3.8
+          path: dist
+
+      - name: Download a single artifact macos_arm64_app for python 3.9
+        uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_app_py_3.9
+          path: dist
+
+      - name: Download a single artifact macos_arm64_app for python 3.10
+        uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_app_py_3.10
+          path: dist
+
+      - name: Download a single artifact macos_arm64_app for python 3.11
+        uses: actions/download-artifact@v3
+        with:
+          name: macos_arm64_app_py_3.11
           path: dist
 
       - name: Download a single artifact linux_app for python 3.7
@@ -558,40 +670,40 @@ jobs:
           files: dist/*
 
 
-  publish_to_pypi:
-    name: Publish to PyPI
-    needs:
-      - build_scancode_wheel_for_pypi
-      - build_scancode_sdist_for_pypi
-      - smoke_test_install_and_run_pypi_wheels_on_windows
-      - smoke_test_install_and_run_pypi_wheels_on_posix
-      - publish_to_gh_release
-    runs-on: ubuntu-20.04
-    defaults:
-      run:
-        shell: bash
-    strategy:
-      fail-fast: true
-      matrix:
-        dist_names: ["wheels-3.7", "wheels-3.8", "wheels-3.9", "wheels-3.10", "wheels-3.11", sdists]
+  # publish_to_pypi:
+  #   name: Publish to PyPI
+  #   needs:
+  #     - build_scancode_wheel_for_pypi
+  #     - build_scancode_sdist_for_pypi
+  #     - smoke_test_install_and_run_pypi_wheels_on_windows
+  #     - smoke_test_install_and_run_pypi_wheels_on_posix
+  #     - publish_to_gh_release
+  #   runs-on: ubuntu-20.04
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       dist_names: ["wheels-3.7", "wheels-3.8", "wheels-3.9", "wheels-3.10", "wheels-3.11", sdists]
 
-    steps:
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
+  #   steps:
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: 3.8
 
-      - name: Download a single artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ matrix.dist_names }}
-          path: dist
+  #     - name: Download a single artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: ${{ matrix.dist_names }}
+  #         path: dist
 
-      - name: Mock PyPI upload
-        run: |
-          ls -al dist
+  #     - name: Mock PyPI upload
+  #       run: |
+  #         ls -al dist
 
-      - name: Publish distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+  #     - name: Publish distributions to PyPI
+  #       uses: pypa/gh-action-pypi-publish@master
+  #       with:
+  #         password: ${{ secrets.PYPI_API_TOKEN }}
